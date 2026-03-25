@@ -1,0 +1,33 @@
+[
+  {
+    "id": 1774393193718,
+    "name": "Carl-Fredrik Testar",
+    "company": "CF Utbildning och ledarskap",
+    "phone": "4670145625",
+    "email": "carl-fredrik@timekiller.net",
+    "role": "VD / Ledningsgruppsmedlem",
+    "status": "ny",
+    "createdAt": "2026-03-24T22:59:53.718Z"
+  },
+  {
+    "id": 1774393159755,
+    "name": "Verifieringstest",
+    "company": "Testbolag AB",
+    "phone": "0709999999",
+    "email": "verify@test.se",
+    "role": "HR-chef / People & Culture",
+    "challenge": "Konflikter eller tystnadskultur",
+    "status": "ny",
+    "createdAt": "2026-03-24T22:59:19.755Z"
+  },
+  {
+    "id": 1774392877967,
+    "name": "Test Person",
+    "company": "Testföretag AB",
+    "phone": "0701234567",
+    "email": "test@testforetag.se",
+    "role": "VD / Ledningsgruppsmedlem",
+    "status": "ny",
+    "createdAt": "2026-03-24T22:54:37.967Z"
+  }
+]

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adminportal — Ledarskapskultur</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1923; --surface: #1c2b3a; --surface2: #243344;
+      --accent: #e8a020; --green: #27ae60; --red: #e74c3c;
+      --blue: #3498db; --yellow: #f39c12;
+      --text: #e8edf2; --muted: #6b7f8e;
+      --border: rgba(255,255,255,0.08);
+      --radius: 10px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* LAYOUT */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .sidebar .brand {
+      padding: 0 24px 28px;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent);
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar nav { padding: 20px 12px; flex: 1; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      font-size: 0.88rem; font-weight: 500;
+      color: var(--muted); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      text-decoration: none;
+    }
+    .nav-item:hover, .nav-item.active {
+      background: rgba(232,160,32,0.1);
+      color: var(--accent);
+    }
+    .nav-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* MAIN */
+    .main { flex: 1; padding: 32px; overflow-x: hidden; }
+
+    /* HEADER */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .header h1 { font-size: 1.5rem; font-weight: 800; }
+    .header .sub { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
+    .refresh-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px;
+      padding: 9px 18px; font-size: 0.85rem; font-family: inherit;
+      cursor: pointer; font-weight: 600;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--surface); }
+
+    /* STATS */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .stat-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .stat-card .value { font-size: 2rem; font-weight: 800; }
+    .stat-card.accent .value { color: var(--accent); }
+    .stat-card.green .value { color: var(--green); }
+    .stat-card.blue .value { color: var(--blue); }
+    .stat-card.red .value { color: var(--red); }
+
+    /* FILTERS */
+    .filters {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 7px 16px; border-radius: 100px;
+      font-size: 0.82rem; font-weight: 600; font-family: inherit;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: rgba(232,160,32,0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .search-wrap { margin-left: auto; position: relative; }
+    .search-wrap input {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px;
+      padding: 8px 14px 8px 36px; font-size: 0.85rem; font-family: inherit;
+      width: 220px; outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap::before {
+      content: '🔍'; position: absolute; left: 10px; top: 50%;
+      transform: translateY(-50%); font-size: 0.8rem; pointer-events: none;
+    }
+
+    /* TABLE */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: var(--surface2); }
+    th {
+      padding: 13px 16px; text-align: left;
+      font-size: 0.75rem; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .name-cell .name { font-weight: 600; }
+    .name-cell .company { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    .contact-cell a { color: var(--accent); text-decoration: none; font-size: 0.82rem; display: block; }
+    .contact-cell a:hover { text-decoration: underline; }
+
+    .challenge-cell { max-width: 180px; font-size: 0.82rem; color: rgba(255,255,255,0.65); }
+
+    .date-cell { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+
+    /* STATUS BADGE */
+    .status-select {
+      border: none; border-radius: 100px;
+      padding: 4px 10px; font-size: 0.75rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; outline: none;
+      appearance: none; -webkit-appearance: none;
+    }
+    .status-ny     { background: rgba(52,152,219,0.2); color: #3498db; }
+    .status-kontaktad { background: rgba(243,156,18,0.2); color: #f39c12; }
+    .status-bokad  { background: rgba(39,174,96,0.2);  color: #27ae60; }
+    .status-avslutad { background: rgba(127,140,141,0.2); color: #7f8c8d; }
+
+    /* ACTIONS */
+    .actions { display: flex; gap: 6px; }
+    .action-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 10px;
+      font-size: 0.78rem; cursor: pointer; color: var(--muted);
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .action-btn:hover { border-color: var(--red); color: var(--red); }
+    .action-btn.email-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center; padding: 60px 24px;
+      color: var(--muted);
+    }
+    .empty .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty p { font-size: 0.9rem; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--green); color: #fff;
+      padding: 12px 20px; border-radius: 8px;
+      font-size: 0.88rem; font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      transform: translateY(80px); opacity: 0;
+      transition: all 0.3s; z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { padding: 20px 16px; }
+      th:nth-child(4), td:nth-child(4),
+      th:nth-child(5), td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">Ledarskapskultur</div>
+    <nav>
+      <a class="nav-item active" href="/admin.html">
+        <span class="icon">📋</span> Förfrågningar
+      </a>
+      <a class="nav-item" href="/index.html" target="_blank">
+        <span class="icon">🚀</span> Landingssida
+      </a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="header">
+      <div>
+        <h1>Förfrågningar</h1>
+        <div class="sub">Alla inkomna leads från landningssidan</div>
+      </div>
+      <button class="refresh-btn" onclick="loadLeads()">↻ Uppdatera</button>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats" id="stats">
+      <div class="stat-card accent">
+        <div class="label">Totalt</div>
+        <div class="value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="label">Nya</div>
+        <div class="value" id="stat-ny">—</div>
+      </div>
+      <div class="stat-card" style="--v-color:var(--yellow)">
+        <div class="label">Kontaktade</div>
+        <div class="value" id="stat-kontaktad" style="color:var(--yellow)">—</div>
+      </div>
+      <div class="stat-card green">
+        <div class="label">Bokade</div>
+        <div class="value" id="stat-bokad">—</div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+      <button class="filter-btn active" data-filter="alla" onclick="setFilter(this, 'alla')">Alla</button>
+      <button class="filter-btn" data-filter="ny" onclick="setFilter(this, 'ny')">Nya</button>
+      <button class="filter-btn" data-filter="kontaktad" onclick="setFilter(this, 'kontaktad')">Kontaktade</button>
+      <button class="filter-btn" data-filter="bokad" onclick="setFilter(this, 'bokad')">Bokade</button>
+      <button class="filter-btn" data-filter="avslutad" onclick="setFilter(this, 'avslutad')">Avslutade</button>
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Sök namn, e-post…" oninput="renderTable()" />
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Kontakt</th>
+            <th>Kontaktuppgifter</th>
+            <th>Roll</th>
+            <th>Utmaning</th>
+            <th>Datum</th>
+            <th>Status</th>
+            <th>Åtgärd</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <tr><td colspan="7"><div class="empty"><div class="icon">⏳</div><p>Laddar…</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let allLeads = [];
+  let currentFilter = 'alla';
+
+  async function loadLeads() {
+    try {
+      const res = await fetch('/api/leads');
+      allLeads = await res.json();
+      updateStats();
+      renderTable();
+    } catch {
+      document.getElementById('leads-tbody').innerHTML =
+        '<tr><td colspan="7"><div class="empty"><div class="icon">❌</div><p>Kunde inte hämta data. Är servern igång?</p></div></td></tr>';
+    }
+  }
+
+  function updateStats() {
+    document.getElementById('stat-total').textContent = allLeads.length;
+    document.getElementById('stat-ny').textContent = allLeads.filter(l => l.status === 'ny').length;
+    document.getElementById('stat-kontaktad').textContent = allLeads.filter(l => l.status === 'kontaktad').length;
+    document.getElementById('stat-bokad').textContent = allLeads.filter(l => l.status === 'bokad').length;
+  }
+
+  function setFilter(el, filter) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    currentFilter = filter;
+    renderTable();
+  }
+
+  function renderTable() {
+    const search = document.getElementById('search').value.toLowerCase();
+    let leads = allLeads;
+
+    if (currentFilter !== 'alla') leads = leads.filter(l => l.status === currentFilter);
+    if (search) leads = leads.filter(l =>
+      (l.name||'').toLowerCase().includes(search) ||
+      (l.email||'').toLowerCase().includes(search) ||
+      (l.company||'').toLowerCase().includes(search)
+    );
+
+    const tbody = document.getElementById('leads-tbody');
+    if (!leads.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="icon">📭</div><p>Inga leads matchar filtret.</p></div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = leads.map(l => `
+      <tr id="row-${l.id}">
+        <td class="name-cell">
+          <div class="name">${esc(l.name)}</div>
+          <div class="company">${esc(l.company || '—')}</div>
+        </td>
+        <td class="contact-cell">
+          <a href="mailto:${esc(l.email)}">${esc(l.email)}</a>
+          <a href="tel:${esc(l.phone)}">${esc(l.phone || '—')}</a>
+        </td>
+        <td style="font-size:0.82rem">${esc(l.role || '—')}</td>
+        <td class="challenge-cell">${esc(l.challenge || '—')}</td>
+        <td class="date-cell">${formatDate(l.createdAt)}</td>
+        <td>
+          <select class="status-select status-${l.status}" onchange="updateStatus(${l.id}, this)">
+            <option value="ny"        ${l.status==='ny'?'selected':''}>🔵 Ny</option>
+            <option value="kontaktad" ${l.status==='kontaktad'?'selected':''}>🟡 Kontaktad</option>
+            <option value="bokad"     ${l.status==='bokad'?'selected':''}>🟢 Bokad</option>
+            <option value="avslutad"  ${l.status==='avslutad'?'selected':''}>⚫ Avslutad</option>
+          </select>
+        </td>
+        <td>
+          <div class="actions">
+            <button class="action-btn email-btn" onclick="window.location='mailto:${esc(l.email)}'">✉ Maila</button>
+            <button class="action-btn" onclick="deleteLead(${l.id})">✕</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function updateStatus(id, select) {
+    const newStatus = select.value;
+    select.className = `status-select status-${newStatus}`;
+    await fetch(`/api/leads/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    const lead = allLeads.find(l => l.id === id);
+    if (lead) lead.status = newStatus;
+    updateStats();
+    showToast('Status uppdaterad');
+  }
+
+  async function deleteLead(id) {
+    if (!confirm('Ta bort detta lead?')) return;
+    await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+    allLeads = allLeads.filter(l => l.id !== id);
+    updateStats();
+    renderTable();
+    showToast('Lead borttaget');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }) +
+           ' ' + d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Auto-refresh var 30:e sekund
+  loadLeads();
+  setInterval(loadLeads, 30000);
+</script>
+
+</body>
+</html>
