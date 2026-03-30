@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Kvittohantering</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f1923;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      background: #1a2634;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 2px solid #e8a020;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav h1 { font-size: 1.2rem; color: #e8a020; white-space: nowrap; }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tabs button {
+      background: transparent;
+      border: 1px solid #334;
+      color: #aaa;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .nav-tabs button.active,
+    .nav-tabs button:hover {
+      background: #e8a020;
+      color: #111;
+      border-color: #e8a020;
+    }
+
+    /* TABS CONTENT */
+    .tab-content { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
+    .tab-content.active { display: block; }
+
+    /* CAMERA TAB */
+    #cameraTab { padding: 0; max-width: 100%; }
+    .camera-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 56px);
+      background: #000;
+      overflow: hidden;
+    }
+    #cameraVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #cameraCanvas { display: none; }
+    .camera-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .camera-status {
+      background: rgba(0,0,0,0.6);
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .camera-status.capturing {
+      background: rgba(232,160,32,0.8);
+      color: #111;
+      font-weight: 600;
+    }
+    .camera-bottom {
+      background: rgba(0,0,0,0.6);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .capture-count {
+      background: #e8a020;
+      color: #111;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .flash-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.1s;
+      pointer-events: none;
+    }
+    .flash-overlay.flash { opacity: 0.7; }
+    #manualCapture {
+      pointer-events: all;
+      background: #e8a020;
+      border: none;
+      color: #111;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .camera-toggle {
+      pointer-events: all;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .auto-btn {
+      pointer-events: all;
+      background: #27ae60;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .auto-btn:hover { background: #219a52; }
+    .auto-btn.stop { background: #c0392b; }
+    .auto-btn.stop:hover { background: #a93226; }
+    .preview-panel {
+      position: absolute;
+      top: 40px;
+      right: 10px;
+      width: 140px;
+      background: rgba(0,0,0,0.7);
+      border: 2px solid #e8a020;
+      border-radius: 8px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .preview-panel img {
+      width: 100%;
+      display: block;
+    }
+    .countdown-bar {
+      position: absolute;
+      bottom: 60px;
+      left: 10px;
+      right: 10px;
+      height: 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .countdown-fill {
+      height: 100%;
+      background: #e8a020;
+      width: 0%;
+      border-radius: 3px;
+      transition: width 0.5s linear;
+    }
+
+    /* UPLOAD TAB */
+    .drop-zone {
+      border: 2px dashed #445;
+      border-radius: 12px;
+      padding: 60px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 20px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #e8a020;
+      background: rgba(232,160,32,0.05);
+    }
+    .drop-zone h3 { color: #e8a020; margin-bottom: 8px; }
+    .drop-zone p { color: #888; font-size: 0.9rem; }
+    #fileInput { display: none; }
+
+    .paste-hint {
+      background: #1a2634;
+      border: 1px solid #334;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+    .paste-hint kbd {
+      background: #334;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #e8a020;
+    }
+
+    /* PREVIEW */
+    .preview-area {
+      display: none;
+      margin-top: 16px;
+    }
+    .preview-area.active { display: block; }
+    .preview-area img {
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid #334;
+    }
+    .ocr-result {
+      background: #1a2634;
+      border: 1px solid #334;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .ocr-status {
+      color: #e8a020;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+
+    /* TRANSACTIONS PARSED TABLE */
+    .tx-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: 0.85rem;
+    }
+    .tx-table th {
+      background: #1a2634;
+      color: #e8a020;
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 2px solid #e8a020;
+      position: sticky;
+      top: 0;
+    }
+    .tx-table td {
+      padding: 8px;
+      border-bottom: 1px solid #223;
+    }
+    .tx-table tr:hover td {
+      background: rgba(232,160,32,0.05);
+    }
+
+    /* RECEIPTS LIST */
+    .receipts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .receipt-card {
+      background: #1a2634;
+      border: 1px solid #334;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .receipt-card:hover { transform: translateY(-2px); }
+    .receipt-card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+    }
+    .receipt-card .info {
+      padding: 10px;
+    }
+    .receipt-card .info .date {
+      color: #888;
+      font-size: 0.75rem;
+    }
+    .receipt-card .info .source {
+      color: #e8a020;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .receipt-card .receipt-name {
+      font-weight: 700;
+      color: #e8a020;
+      font-size: 0.9rem;
+      margin-bottom: 2px;
+      word-break: break-word;
+    }
+    .receipt-card .save-device-btn {
+      background: #27ae60;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      margin-top: 6px;
+      margin-right: 4px;
+    }
+    .receipt-card .save-device-btn:hover { background: #219a52; }
+    .receipt-card .delete-btn {
+      background: #c0392b;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      margin-top: 6px;
+    }
+    .receipt-card .card-checkbox {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      accent-color: #e8a020;
+      z-index: 2;
+    }
+    .receipt-card { position: relative; }
+    .receipt-card.selected { border-color: #e8a020; box-shadow: 0 0 0 2px #e8a020; }
+    .action-btn {
+      background: #334;
+      border: 1px solid #556;
+      color: #ccc;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .action-btn:hover { background: #445; }
+    .action-btn.save-btn {
+      background: #e8a020;
+      color: #111;
+      border-color: #e8a020;
+      font-weight: 600;
+    }
+    .action-btn.save-btn:hover { background: #d4911a; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #556;
+    }
+    .empty-state h3 { margin-bottom: 8px; }
+
+    /* OCR progress bar */
+    .ocr-progress {
+      height: 4px;
+      background: #223;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .ocr-progress-bar {
+      height: 100%;
+      background: #e8a020;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* Saved toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #27ae60;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 92vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+    }
+    .lightbox-filename {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #e8a020;
+      font-weight: 600;
+      font-size: 1rem;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 16px;
+      border-radius: 6px;
+    }
+    .receipt-card img { cursor: zoom-in; }
+
+    /* Transaction list */
+    .tx-item {
+      background: #1a2634;
+      border: 1px solid #334;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+      transition: all 0.2s;
+    }
+    .tx-item:hover { border-color: #445; }
+    .tx-item.done { opacity: 0.5; border-color: #27ae60; }
+    .tx-item.done .tx-merchant { text-decoration: line-through; }
+    .tx-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #27ae60;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .tx-details { flex: 1; min-width: 0; }
+    .tx-merchant {
+      font-weight: 700;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+    }
+    .tx-meta {
+      color: #888;
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+    .tx-amount {
+      font-weight: 700;
+      color: #e8a020;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+    .tx-status-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .tx-status-badge.done { background: #27ae60; color: white; }
+    .tx-status-badge.pending { background: #e8a020; color: #111; }
+    .tx-status-badge.not-handled { background: #95a5a6; color: white; }
+
+    /* Vendor links */
+    .vendor-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .vendor-input {
+      flex: 1;
+      min-width: 150px;
+      padding: 10px 14px;
+      border: 1px solid #334;
+      border-radius: 6px;
+      background: #1a2634;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+    }
+    .vendor-input:focus { border-color: #e8a020; outline: none; }
+    .vendor-add-btn {
+      background: #e8a020;
+      color: #111;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .vendor-add-btn:hover { background: #d4911a; }
+    .vendor-list { display: flex; flex-direction: column; gap: 8px; }
+    .vendor-card {
+      background: #1a2634;
+      border: 1px solid #334;
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .vendor-card:hover { border-color: #445; }
+    .vendor-info { flex: 1; min-width: 0; }
+    .vendor-info .vendor-title {
+      font-weight: 700;
+      color: #e8a020;
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+    .vendor-info a {
+      color: #6cb4ee;
+      font-size: 0.85rem;
+      word-break: break-all;
+      text-decoration: none;
+    }
+    .vendor-info a:hover { text-decoration: underline; }
+    .vendor-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .vendor-actions button {
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+    .vendor-open-btn { background: #27ae60; color: white; }
+    .vendor-open-btn:hover { background: #219a52; }
+    .vendor-edit-btn { background: #3498db; color: white; }
+    .vendor-edit-btn:hover { background: #2980b9; }
+    .vendor-del-btn { background: #c0392b; color: white; }
+    .vendor-del-btn:hover { background: #a93226; }
+
+    @media (max-width: 600px) {
+      nav { padding: 8px 12px; gap: 8px; }
+      nav h1 { font-size: 1rem; }
+      .nav-tabs button { padding: 6px 10px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <h1>Kvitton</h1>
+  <div class="nav-tabs">
+    <button class="active" data-tab="startTab">Transaktioner</button>
+    <button data-tab="cameraTab">Kamera</button>
+    <button data-tab="uploadTab">Ladda upp</button>
+    <button data-tab="listTab">Sparade kvitton</button>
+    <button data-tab="emailTab">Hemsida</button>
+    <button data-tab="websiteTab">E-post</button>
+  </div>
+</nav>
+
+<!-- STARTFLIK: TRANSAKTIONER -->
+<div id="startTab" class="tab-content active">
+  <div class="paste-hint">
+    Tryck <kbd>Ctrl+V</kbd> för att klistra in en bild från Fortnox/banken, eller dra och släpp nedan
+  </div>
+  <div class="drop-zone" id="txDropZone">
+    <h3>Klistra in eller dra bild med transaktioner hit</h3>
+    <p>T.ex. en skärmdump från Fortnox betalningar</p>
+    <input type="file" id="txFileInput" accept="image/*" style="display:none">
+  </div>
+  <div id="txOcrStatus" class="ocr-status" style="display:none"></div>
+  <div class="ocr-progress" id="txOcrProgress" style="display:none"><div class="ocr-progress-bar" id="txOcrProgressBar"></div></div>
+
+  <div id="txListHeader" style="display:none;margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <h2 style="color:#e8a020">Betalningar</h2>
+      <div style="display:flex;gap:8px">
+        <span id="txCounter" style="color:#888;font-size:0.85rem"></span>
+        <button class="action-btn" id="txClearDoneBtn" onclick="clearDoneTransactions()">Rensa avbockade</button>
+      </div>
+    </div>
+  </div>
+  <div id="txList"></div>
+</div>
+
+<!-- KAMERA-FLIK -->
+<div id="cameraTab" class="tab-content">
+  <div class="camera-container">
+    <video id="cameraVideo" autoplay playsinline></video>
+    <canvas id="cameraCanvas"></canvas>
+    <div class="camera-overlay">
+      <div id="cameraStatus" class="camera-status">
+        Starta kameran för att förhandsgranska.
+      </div>
+      <div id="previewPanel" class="preview-panel" style="display:none">
+        <img id="lastCapturePreview" alt="Förhandsgranskning">
+      </div>
+      <div id="countdownBar" class="countdown-bar" style="display:none">
+        <div id="countdownFill" class="countdown-fill"></div>
+      </div>
+      <div class="camera-bottom">
+        <button class="camera-toggle" id="toggleCamera">Starta kamera</button>
+        <button id="startAutoBtn" class="auto-btn" style="display:none">Starta auto-foto (15s)</button>
+        <button id="stopAutoBtn" class="auto-btn stop" style="display:none">Stoppa auto-foto</button>
+        <button id="manualCapture" style="display:none">Fota manuellt</button>
+        <span class="capture-count" id="captureCount" style="display:none">0 sparade</span>
+      </div>
+    </div>
+    <div class="flash-overlay" id="flashOverlay"></div>
+  </div>
+</div>
+
+<!-- LADDA UPP / KLISTRA IN -->
+<div id="uploadTab" class="tab-content">
+  <div class="paste-hint">
+    Tryck <kbd>Ctrl+V</kbd> för att klistra in en bild från urklipp (t.ex. skärmdump av transaktioner)
+  </div>
+  <div class="drop-zone" id="dropZone">
+    <h3>Dra och släpp en bild här</h3>
+    <p>eller klicka för att välja fil</p>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+  </div>
+  <div class="preview-area" id="previewArea">
+    <img id="previewImg">
+    <div class="ocr-status" id="ocrStatus"></div>
+    <div class="ocr-progress"><div class="ocr-progress-bar" id="ocrProgressBar"></div></div>
+    <div class="ocr-result" id="ocrResult" style="display:none"></div>
+    <div id="parsedTransactions"></div>
+  </div>
+</div>
+
+<!-- SPARADE KVITTON -->
+<div id="listTab" class="tab-content">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <h2 style="color:#e8a020">Sparade kvitton</h2>
+    <div class="list-actions" id="listActions" style="display:none;gap:8px;display:flex">
+      <button class="action-btn" id="selectAllBtn" onclick="toggleSelectAll()">Markera alla</button>
+      <button class="action-btn save-btn" id="saveSelectedBtn" onclick="saveSelected()">Spara valda till dator</button>
+    </div>
+  </div>
+  <div id="receiptsList" class="receipts-grid"></div>
+</div>
+
+<!-- E-POST / LEVERANTÖRSLÄNKAR -->
+<div id="emailTab" class="tab-content">
+  <h2 style="color:#e8a020;margin-bottom:12px">Leverantörer & fakturalänkar</h2>
+
+  <!-- Lägg till ny -->
+  <div class="vendor-form">
+    <input type="text" id="vendorName" placeholder="Leverantörsnamn (t.ex. Telia)" class="vendor-input">
+    <input type="url" id="vendorUrl" placeholder="Länk till fakturasida (https://...)" class="vendor-input">
+    <button id="addVendorBtn" class="vendor-add-btn">Lägg till</button>
+  </div>
+
+  <div id="vendorList" class="vendor-list"></div>
+</div>
+
+<!-- HEMSIDA -->
+<div id="websiteTab" class="tab-content">
+  <h2 style="color:#e8a020;margin-bottom:12px">Hemsida</h2>
+  <div class="empty-state">
+    <h3>Kommer snart</h3>
+    <p>Hämta fakturor från leverantörers webbplatser</p>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <img id="lightboxImg" src="">
+  <div class="lightbox-filename" id="lightboxFilename"></div>
+</div>
+
+<div class="toast" id="toast">Kvitto sparat!</div>
+
+<!-- Tesseract.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+// ===== INDEXEDDB STORAGE (works without server) =====
+const DB_NAME = 'KvittonDB';
+const DB_VERSION = 3;
+const STORE_NAME = 'receipts';
+const VENDOR_STORE = 'vendors';
+const TX_STORE = 'transactions';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(VENDOR_STORE)) {
+        db.createObjectStore(VENDOR_STORE, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(TX_STORE)) {
+        db.createObjectStore(TX_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbSaveReceipt(receipt) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(receipt);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetAllReceipts() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => {
+      // Sort newest first
+      const results = req.result.sort((a, b) => b.id - a.id);
+      resolve(results);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDeleteReceipt(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbUpdateReceipt(id, updates) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const receipt = getReq.result;
+      if (receipt) {
+        Object.assign(receipt, updates);
+        store.put(receipt);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ===== TRANSACTIONS DB =====
+async function dbSaveTx(tx) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(TX_STORE, 'readwrite');
+    t.objectStore(TX_STORE).put(tx);
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+  });
+}
+
+async function dbGetAllTx() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(TX_STORE, 'readonly');
+    const req = t.objectStore(TX_STORE).getAll();
+    req.onsuccess = () => resolve(req.result.sort((a, b) => b.id - a.id));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDeleteTx(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(TX_STORE, 'readwrite');
+    t.objectStore(TX_STORE).delete(id);
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+  });
+}
+
+// ===== VENDOR DB =====
+async function dbSaveVendor(vendor) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VENDOR_STORE, 'readwrite');
+    tx.objectStore(VENDOR_STORE).put(vendor);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetAllVendors() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VENDOR_STORE, 'readonly');
+    const req = tx.objectStore(VENDOR_STORE).getAll();
+    req.onsuccess = () => resolve(req.result.sort((a, b) => a.name.localeCompare(b.name, 'sv')));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDeleteVendor(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VENDOR_STORE, 'readwrite');
+    tx.objectStore(VENDOR_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ===== TAB NAVIGATION =====
+document.querySelectorAll('.nav-tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'startTab') loadTransactionList();
+    if (btn.dataset.tab === 'listTab') loadReceipts();
+    if (btn.dataset.tab === 'emailTab') loadVendors();
+  });
+});
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || 'Kvitto sparat!';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== CAMERA WITH PREVIEW + 15s INTERVAL =====
+const video = document.getElementById('cameraVideo');
+const canvas = document.getElementById('cameraCanvas');
+const ctx = canvas.getContext('2d');
+const statusEl = document.getElementById('cameraStatus');
+const flashEl = document.getElementById('flashOverlay');
+const countEl = document.getElementById('captureCount');
+const manualBtn = document.getElementById('manualCapture');
+const toggleBtn = document.getElementById('toggleCamera');
+const startAutoBtn = document.getElementById('startAutoBtn');
+const stopAutoBtn = document.getElementById('stopAutoBtn');
+const previewPanel = document.getElementById('previewPanel');
+const lastCapturePreview = document.getElementById('lastCapturePreview');
+const countdownBar = document.getElementById('countdownBar');
+const countdownFill = document.getElementById('countdownFill');
+
+let cameraStream = null;
+let captureCount = 0;
+let isCapturing = false;
+let autoInterval = null;
+let countdownTimer = null;
+const AUTO_INTERVAL_MS = 15000;
+
+toggleBtn.addEventListener('click', async () => {
+  if (cameraStream) {
+    stopCamera();
+  } else {
+    await startCamera();
+  }
+});
+
+manualBtn.addEventListener('click', () => {
+  captureAndSave();
+});
+
+startAutoBtn.addEventListener('click', () => {
+  startAutoCapture();
+});
+
+stopAutoBtn.addEventListener('click', () => {
+  stopAutoCapture();
+});
+
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        // Request continuous autofocus
+        focusMode: { ideal: 'continuous' }
+      }
+    });
+    video.srcObject = cameraStream;
+
+    // Enable continuous autofocus if supported
+    const track = cameraStream.getVideoTracks()[0];
+    const caps = track.getCapabilities?.() || {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) {
+      await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    }
+    // Also enable auto white balance and exposure for sharper receipts
+    const advancedConstraints = [];
+    if (caps.whiteBalanceMode?.includes('continuous'))
+      advancedConstraints.push({ whiteBalanceMode: 'continuous' });
+    if (caps.exposureMode?.includes('continuous'))
+      advancedConstraints.push({ exposureMode: 'continuous' });
+    if (advancedConstraints.length > 0) {
+      await track.applyConstraints({ advanced: advancedConstraints }).catch(() => {});
+    }
+    toggleBtn.textContent = 'Stoppa kamera';
+    manualBtn.style.display = 'block';
+    startAutoBtn.style.display = 'block';
+    countEl.style.display = 'inline';
+    statusEl.textContent = 'Förhandsgranskning — rikta kameran mot kvittot. Tryck "Starta auto-foto" när du är redo.';
+  } catch (err) {
+    statusEl.textContent = 'Kunde inte starta kameran: ' + err.message;
+  }
+}
+
+function stopCamera() {
+  stopAutoCapture();
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  video.srcObject = null;
+  toggleBtn.textContent = 'Starta kamera';
+  manualBtn.style.display = 'none';
+  startAutoBtn.style.display = 'none';
+  stopAutoBtn.style.display = 'none';
+  previewPanel.style.display = 'none';
+  countdownBar.style.display = 'none';
+  statusEl.textContent = 'Kameran är stoppad';
+}
+
+function startAutoCapture() {
+  startAutoBtn.style.display = 'none';
+  stopAutoBtn.style.display = 'block';
+  countdownBar.style.display = 'block';
+  statusEl.textContent = 'Auto-foto igång — fotar var 15:e sekund';
+  statusEl.className = 'camera-status capturing';
+
+  // Take first photo immediately
+  captureAndSave();
+
+  // Start countdown + interval
+  startCountdown();
+  autoInterval = setInterval(() => {
+    captureAndSave();
+    startCountdown();
+  }, AUTO_INTERVAL_MS);
+}
+
+function stopAutoCapture() {
+  if (autoInterval) {
+    clearInterval(autoInterval);
+    autoInterval = null;
+  }
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+  stopAutoBtn.style.display = 'none';
+  countdownBar.style.display = 'none';
+  countdownFill.style.width = '0%';
+  if (cameraStream) {
+    startAutoBtn.style.display = 'block';
+    statusEl.textContent = 'Auto-foto stoppat — förhandsgranskning aktiv';
+    statusEl.className = 'camera-status';
+  }
+}
+
+function startCountdown() {
+  let elapsed = 0;
+  const step = 500;
+  countdownFill.style.width = '0%';
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    elapsed += step;
+    const pct = Math.min(100, (elapsed / AUTO_INTERVAL_MS) * 100);
+    countdownFill.style.width = pct + '%';
+    const remaining = Math.ceil((AUTO_INTERVAL_MS - elapsed) / 1000);
+    if (remaining > 0 && !isCapturing) {
+      statusEl.textContent = `Nästa foto om ${remaining}s...`;
+    }
+  }, step);
+}
+
+async function captureAndSave() {
+  if (isCapturing) return;
+  isCapturing = true;
+
+  // Flash effect
+  flashEl.classList.add('flash');
+  setTimeout(() => flashEl.classList.remove('flash'), 200);
+
+  // Capture frame — limit to 1600px max dimension to keep file size manageable
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const maxDim = 1600;
+  const ratio = Math.min(1, maxDim / Math.max(vw, vh));
+  canvas.width = Math.round(vw * ratio);
+  canvas.height = Math.round(vh * ratio);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Auto-crop: detect receipt (bright area on darker background)
+  const croppedData = autoCropReceipt(canvas);
+
+  // Convert base64 to Blob for multipart upload (much more reliable than JSON)
+  const blob = await (await fetch(croppedData)).blob();
+  console.log('Bildstorlek:', Math.round(blob.size / 1024), 'KB');
+
+  // Show preview thumbnail
+  previewPanel.style.display = 'block';
+  lastCapturePreview.src = croppedData;
+
+  // Save image IMMEDIATELY to IndexedDB
+  statusEl.textContent = 'Sparar bild...';
+  statusEl.className = 'camera-status capturing';
+
+  const savedId = Date.now();
+  try {
+    const receipt = {
+      id: savedId,
+      imageData: croppedData,
+      ocrText: '',
+      filename: '',
+      source: 'camera',
+      createdAt: new Date().toISOString(),
+    };
+    await dbSaveReceipt(receipt);
+    captureCount++;
+    countEl.textContent = captureCount + ' sparade';
+    showToast(`Kvitto #${captureCount} sparat!`);
+  } catch (err) {
+    console.error('Kunde inte spara:', err);
+    showToast('Sparfel: ' + err.message);
+  }
+
+  isCapturing = false;
+
+  // Run OCR in background AFTER save
+  runOcrInBackground(croppedData, savedId);
+}
+
+// OCR runs after image is already saved — updates the receipt with extracted name
+async function runOcrInBackground(imageData, receiptId) {
+  try {
+    statusEl.textContent = 'Läser kvittotext (OCR)...';
+    const ocrResult = await Tesseract.recognize(imageData, 'swe+eng');
+    const ocrText = ocrResult.data.text;
+    console.log('OCR-text:', ocrText);
+    const parsed = extractReceiptInfo(ocrText);
+    console.log('Parsed receipt:', parsed);
+
+    if (parsed.filename || ocrText) {
+      await dbUpdateReceipt(receiptId, { ocrText, filename: parsed.filename });
+      if (parsed.filename) {
+        showToast(`Namn: ${parsed.filename}`);
+      }
+    }
+    statusEl.textContent = parsed.filename
+      ? `OCR klar: ${parsed.filename}`
+      : 'OCR klar';
+  } catch (e) {
+    console.warn('OCR misslyckades:', e);
+    statusEl.textContent = 'Redo';
+  }
+  statusEl.className = 'camera-status';
+}
+
+// Extract company name and total amount from OCR text
+function extractReceiptInfo(text) {
+  console.log('OCR-text:', text);
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Company name: first line with at least 2 letters (skip noise, dates, numbers)
+  let company = '';
+  for (const line of lines) {
+    const clean = line.replace(/[^a-zA-ZåäöÅÄÖ0-9\s&\-\.\/]/g, '').trim();
+    if (clean.length < 2) continue;
+    // Skip lines that are purely numeric or dates
+    if (/^\d[\d\s.,\-\/]*$/.test(clean)) continue;
+    // Skip common non-name lines
+    if (/^(kvitto|receipt|välkommen|welcome|tel|fax|org\.?\s*nr)/i.test(clean)) continue;
+    // Must contain at least 2 letters
+    if ((clean.match(/[a-zA-ZåäöÅÄÖ]/g) || []).length < 2) continue;
+    company = clean;
+    break;
+  }
+
+  // Total amount: search from bottom up for labeled totals
+  let amount = '';
+  const reversedLines = [...lines].reverse();
+  for (const line of reversedLines) {
+    const totalMatch = line.match(/(?:total|summa|att\s*betala|totalt|sum|amount|belopp|netto|brutto|å\s*betala|credit|debet|kort|kontant)[:\s]*[a-z]*\s*(\d[\d\s]*[.,]\d{2})/i);
+    if (totalMatch) {
+      amount = totalMatch[1].replace(/\s/g, '');
+      break;
+    }
+  }
+
+  // Fallback: look for "SEK" or "kr" next to an amount
+  if (!amount) {
+    for (const line of reversedLines) {
+      const krMatch = line.match(/(\d[\d\s]*[.,]\d{2})\s*(?:kr|sek|:-)/i) ||
+                      line.match(/(?:kr|sek)\s*(\d[\d\s]*[.,]\d{2})/i);
+      if (krMatch) {
+        amount = krMatch[1].replace(/\s/g, '');
+        break;
+      }
+    }
+  }
+
+  // Fallback: largest amount on the receipt
+  if (!amount) {
+    const allAmounts = [];
+    for (const line of lines) {
+      const matches = line.match(/(\d[\d\s]*[.,]\d{2})/g);
+      if (matches) {
+        for (const m of matches) {
+          const val = parseFloat(m.replace(/\s/g, '').replace(',', '.'));
+          if (!isNaN(val) && val > 0) allAmounts.push({ val, str: m.replace(/\s/g, '') });
+        }
+      }
+    }
+    if (allAmounts.length > 0) {
+      allAmounts.sort((a, b) => b.val - a.val);
+      amount = allAmounts[0].str;
+    }
+  }
+
+  // Build filename — use whatever we found
+  const safeName = company
+    ? company.substring(0, 40).replace(/\s+/g, '_').replace(/[^a-zA-ZåäöÅÄÖ0-9_\-]/g, '')
+    : '';
+  const safeAmount = amount ? '_' + amount.replace(',', '-').replace('.', '-') : '';
+
+  let filename;
+  if (safeName && safeAmount) {
+    filename = `${safeName}${safeAmount}kr`;
+  } else if (safeName) {
+    filename = safeName;
+  } else if (safeAmount) {
+    filename = `kvitto${safeAmount}kr`;
+  } else {
+    filename = '';  // server will use timestamp
+  }
+
+  console.log('Parsed receipt:', { company, amount, filename });
+  return { company, amount, filename };
+}
+
+// Auto-crop receipt: white paper on dark/black background
+// Uses flood-fill from edges to find background, then crops to the paper
+function autoCropReceipt(sourceCanvas) {
+  const w = sourceCanvas.width;
+  const h = sourceCanvas.height;
+
+  // Downscale for speed
+  const scale = Math.min(1, 400 / Math.max(w, h));
+  const sw = Math.round(w * scale);
+  const sh = Math.round(h * scale);
+
+  const work = document.createElement('canvas');
+  work.width = sw; work.height = sh;
+  const wCtx = work.getContext('2d');
+  wCtx.drawImage(sourceCanvas, 0, 0, sw, sh);
+  const px = wCtx.getImageData(0, 0, sw, sh).data;
+
+  // Grayscale
+  const gray = new Uint8Array(sw * sh);
+  for (let i = 0; i < gray.length; i++) {
+    const p = i * 4;
+    gray[i] = (px[p] * 77 + px[p+1] * 150 + px[p+2] * 29) >> 8;
+  }
+
+  // Determine background brightness from edges of the image
+  let edgeSamples = [];
+  for (let x = 0; x < sw; x++) {
+    edgeSamples.push(gray[x]);                    // top row
+    edgeSamples.push(gray[(sh-1)*sw + x]);         // bottom row
+  }
+  for (let y = 0; y < sh; y++) {
+    edgeSamples.push(gray[y*sw]);                  // left col
+    edgeSamples.push(gray[y*sw + (sw-1)]);         // right col
+  }
+  edgeSamples.sort((a, b) => a - b);
+  const bgBrightness = edgeSamples[Math.floor(edgeSamples.length * 0.5)]; // median
+
+  // Threshold: paper pixels are significantly brighter than the background
+  // For dark bg: anything much brighter is paper
+  // For light bg: use a fixed high threshold
+  const threshold = bgBrightness < 80
+    ? bgBrightness + 50   // dark background — paper is much brighter
+    : 180;                 // light background fallback
+
+  // Create binary mask: 1 = paper, 0 = background
+  const mask = new Uint8Array(sw * sh);
+  for (let i = 0; i < gray.length; i++) {
+    mask[i] = gray[i] > threshold ? 1 : 0;
+  }
+
+  // Erode then dilate (morphological open) to remove noise
+  function erode(src, w, h) {
+    const dst = new Uint8Array(w * h);
+    for (let y = 1; y < h-1; y++) {
+      for (let x = 1; x < w-1; x++) {
+        dst[y*w+x] = (src[y*w+x] && src[(y-1)*w+x] && src[(y+1)*w+x] &&
+                       src[y*w+x-1] && src[y*w+x+1]) ? 1 : 0;
+      }
+    }
+    return dst;
+  }
+  function dilate(src, w, h) {
+    const dst = new Uint8Array(w * h);
+    for (let y = 1; y < h-1; y++) {
+      for (let x = 1; x < w-1; x++) {
+        dst[y*w+x] = (src[y*w+x] || src[(y-1)*w+x] || src[(y+1)*w+x] ||
+                       src[y*w+x-1] || src[y*w+x+1]) ? 1 : 0;
+      }
+    }
+    return dst;
+  }
+
+  // Apply morphological open (erode + dilate) to clean up
+  let cleaned = erode(mask, sw, sh);
+  cleaned = erode(cleaned, sw, sh);
+  cleaned = dilate(cleaned, sw, sh);
+  cleaned = dilate(cleaned, sw, sh);
+
+  // Find bounding box of the largest connected bright region
+  // Use flood-fill to find connected components
+  const labels = new Int32Array(sw * sh);
+  let nextLabel = 1;
+  const componentSizes = {};
+
+  for (let y = 0; y < sh; y++) {
+    for (let x = 0; x < sw; x++) {
+      if (cleaned[y*sw+x] === 1 && labels[y*sw+x] === 0) {
+        // BFS flood fill
+        const label = nextLabel++;
+        const queue = [[x, y]];
+        let size = 0;
+        labels[y*sw+x] = label;
+
+        while (queue.length > 0) {
+          const [cx, cy] = queue.shift();
+          size++;
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+          for (const [dx, dy] of dirs) {
+            const nx = cx+dx, ny = cy+dy;
+            if (nx >= 0 && nx < sw && ny >= 0 && ny < sh &&
+                cleaned[ny*sw+nx] === 1 && labels[ny*sw+nx] === 0) {
+              labels[ny*sw+nx] = label;
+              queue.push([nx, ny]);
+            }
+          }
+        }
+        componentSizes[label] = size;
+      }
+    }
+  }
+
+  // Find the largest component (that's our receipt)
+  let largestLabel = 0, largestSize = 0;
+  for (const [label, size] of Object.entries(componentSizes)) {
+    if (size > largestSize) {
+      largestSize = size;
+      largestLabel = Number(label);
+    }
+  }
+
+  if (largestSize < sw * sh * 0.02) {
+    // Too small — no clear receipt found
+    return sourceCanvas.toDataURL('image/jpeg', 0.75);
+  }
+
+  // Get bounding box of the largest component
+  let top = sh, bottom = 0, left = sw, right = 0;
+  for (let y = 0; y < sh; y++) {
+    for (let x = 0; x < sw; x++) {
+      if (labels[y*sw+x] === largestLabel) {
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+        if (x < left) left = x;
+        if (x > right) right = x;
+      }
+    }
+  }
+
+  const cropW = right - left;
+  const cropH = bottom - top;
+  if (cropW < sw * 0.05 || cropH < sh * 0.05) {
+    return sourceCanvas.toDataURL('image/jpeg', 0.75);
+  }
+
+  // Map back to original with small padding
+  const pad = Math.round(Math.min(cropW, cropH) / scale * 0.01);
+  const fx = Math.max(0, Math.round(left / scale) - pad);
+  const fy = Math.max(0, Math.round(top / scale) - pad);
+  const fw = Math.min(w - fx, Math.round(cropW / scale) + pad * 2);
+  const fh = Math.min(h - fy, Math.round(cropH / scale) + pad * 2);
+
+  const out = document.createElement('canvas');
+  out.width = fw; out.height = fh;
+  out.getContext('2d').drawImage(sourceCanvas, fx, fy, fw, fh, 0, 0, fw, fh);
+  return out.toDataURL('image/jpeg', 0.75);
+}
+
+// ===== UPLOAD / PASTE =====
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const previewArea = document.getElementById('previewArea');
+const previewImg = document.getElementById('previewImg');
+const ocrStatus = document.getElementById('ocrStatus');
+const ocrProgressBar = document.getElementById('ocrProgressBar');
+const ocrResult = document.getElementById('ocrResult');
+const parsedTx = document.getElementById('parsedTransactions');
+
+// Paste
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      // If on start tab, handle as transaction image
+      const startActive = document.getElementById('startTab').classList.contains('active');
+      if (startActive) {
+        handleTransactionImage(file);
+      } else {
+        handleImageFile(file);
+        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelector('[data-tab="uploadTab"]').classList.add('active');
+        document.getElementById('uploadTab').classList.add('active');
+      }
+      break;
+    }
+  }
+});
+
+// Drag and drop
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) handleImageFile(files[0]);
+});
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) handleImageFile(fileInput.files[0]);
+});
+
+async function handleImageFile(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const imageData = e.target.result;
+    previewImg.src = imageData;
+    previewArea.classList.add('active');
+    ocrResult.style.display = 'none';
+    parsedTx.innerHTML = '';
+
+    ocrStatus.textContent = 'Kör OCR...';
+    ocrProgressBar.style.width = '0%';
+
+    try {
+      const result = await Tesseract.recognize(imageData, 'swe+eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            ocrProgressBar.style.width = Math.round(m.progress * 100) + '%';
+          }
+        }
+      });
+
+      const text = result.data.text;
+      ocrResult.textContent = text;
+      ocrResult.style.display = 'block';
+      ocrStatus.textContent = 'OCR klar! Försöker tolka transaktioner...';
+      ocrProgressBar.style.width = '100%';
+
+      // Try to parse transactions
+      const transactions = parseTransactions(text);
+      if (transactions.length > 0) {
+        renderTransactions(transactions);
+        ocrStatus.textContent = `Hittade ${transactions.length} transaktioner`;
+      }
+
+      // Save to IndexedDB
+      const info = extractReceiptInfo(text);
+      await dbSaveReceipt({
+        id: Date.now(),
+        imageData,
+        ocrText: text,
+        filename: info.filename,
+        source: 'upload',
+        createdAt: new Date().toISOString(),
+      });
+      showToast(info.filename ? `${info.filename} sparad!` : 'Kvittobild sparad!');
+    } catch (err) {
+      ocrStatus.textContent = 'OCR-fel: ' + err.message;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function parseTransactions(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const transactions = [];
+
+  // Pattern: date, merchant, optional person, amount, optional card, optional status
+  // Date formats: YYYY-MM-DD or DD/MM/YYYY
+  const dateRegex = /(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})/;
+  const amountRegex = /(-?\d[\d\s]*[.,]\d{2})\s*(kr|EUR|SEK)?/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const dateMatch = line.match(dateRegex);
+    if (!dateMatch) continue;
+
+    const date = dateMatch[1];
+    // Look for amount in same line or next lines
+    let searchText = line;
+    if (i + 1 < lines.length) searchText += ' ' + lines[i + 1];
+    if (i + 2 < lines.length) searchText += ' ' + lines[i + 2];
+
+    const amountMatch = searchText.match(amountRegex);
+    if (!amountMatch) continue;
+
+    const amount = amountMatch[1].replace(/\s/g, '');
+    const currency = amountMatch[2] || 'kr';
+
+    // Extract merchant name: text between date and amount/person
+    let afterDate = searchText.substring(searchText.indexOf(date) + date.length).trim();
+    // Remove common noise
+    afterDate = afterDate.replace(/Reserverad/gi, '').replace(/Carl-Fredrik\s*Zetterman/gi, '').trim();
+    // Get first meaningful chunk as merchant
+    const merchant = afterDate.split(/\s{2,}|\t/)[0]?.trim()?.replace(/[^a-zA-ZåäöÅÄÖ0-9\s\*\.\-]/g, '')?.trim() || 'Okänd';
+
+    // Look for card number (4 digits)
+    const cardMatch = searchText.match(/\b(\d{4})\b/g);
+    const card = cardMatch ? cardMatch[cardMatch.length - 1] : '';
+
+    // Look for status
+    let status = '';
+    if (/bokförd/i.test(searchText)) status = 'Bokförd';
+    else if (/pågående/i.test(searchText)) status = 'Pågående';
+    else if (/ej\s*hanterad/i.test(searchText)) status = 'Ej hanterad';
+    else if (/reserverad/i.test(searchText)) status = 'Reserverad';
+
+    transactions.push({ date, merchant, amount, currency, card, status });
+  }
+
+  return transactions;
+}
+
+function renderTransactions(transactions) {
+  let html = `
+    <table class="tx-table">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Inköpsställe</th>
+          <th>Belopp</th>
+          <th>Kort</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  for (const tx of transactions) {
+    html += `
+      <tr>
+        <td>${tx.date}</td>
+        <td>${tx.merchant}</td>
+        <td>${tx.amount} ${tx.currency}</td>
+        <td>${tx.card}</td>
+        <td>${tx.status}</td>
+      </tr>
+    `;
+  }
+  html += '</tbody></table>';
+  parsedTx.innerHTML = html;
+}
+
+// ===== RECEIPTS LIST =====
+async function loadReceipts() {
+  const list = document.getElementById('receiptsList');
+  try {
+    const receipts = await dbGetAllReceipts();
+
+    if (receipts.length === 0) {
+      list.innerHTML = '<div class="empty-state"><h3>Inga kvitton sparade ännu</h3><p>Använd kameran eller ladda upp en bild</p></div>';
+      document.getElementById('listActions').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('listActions').style.display = 'flex';
+
+    let html = '';
+    for (const r of receipts) {
+      const date = new Date(r.createdAt).toLocaleString('sv-SE');
+      const imgSrc = r.imageData || r.imagePath || '';
+      const safeName = (r.filename || '').replace(/'/g, "\\'");
+      html += `
+        <div class="receipt-card" data-id="${r.id}" data-img="${r.id}" data-filename="${r.filename || ''}">
+          <input type="checkbox" class="card-checkbox" onchange="updateSelection()">
+          <img src="${imgSrc}" alt="Kvitto" loading="lazy" onclick="openLightbox('${r.id}')" >
+          <div class="info">
+            ${r.filename ? `<div class="receipt-name">${r.filename}</div>` : ''}
+            <div class="source">${r.source === 'camera' ? 'Kamera' : 'Uppladdad'}</div>
+            <div class="date">${date}</div>
+            <button class="save-device-btn" onclick="saveReceiptToDevice(${r.id})">Spara till enhet</button>
+            <button class="delete-btn" onclick="deleteReceipt(${r.id})">Ta bort</button>
+          </div>
+        </div>
+      `;
+    }
+    list.innerHTML = html;
+  } catch (err) {
+    console.error('Kunde inte ladda:', err);
+    list.innerHTML = '<div class="empty-state"><h3>Kunde inte ladda kvitton</h3></div>';
+  }
+}
+
+function updateSelection() {
+  const cards = document.querySelectorAll('.receipt-card');
+  let count = 0;
+  cards.forEach(card => {
+    const cb = card.querySelector('.card-checkbox');
+    if (cb.checked) {
+      card.classList.add('selected');
+      count++;
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+  const saveBtn = document.getElementById('saveSelectedBtn');
+  saveBtn.textContent = count > 0 ? `Spara ${count} valda till dator` : 'Spara valda till dator';
+}
+
+function toggleSelectAll() {
+  const boxes = document.querySelectorAll('.card-checkbox');
+  const allChecked = [...boxes].every(cb => cb.checked);
+  boxes.forEach(cb => { cb.checked = !allChecked; });
+  document.getElementById('selectAllBtn').textContent = allChecked ? 'Markera alla' : 'Avmarkera alla';
+  updateSelection();
+}
+
+async function saveSelected() {
+  const selected = document.querySelectorAll('.receipt-card.selected');
+  if (selected.length === 0) {
+    showToast('Välj minst ett kvitto');
+    return;
+  }
+
+  const allReceipts = await dbGetAllReceipts();
+  const files = [];
+
+  for (const card of selected) {
+    const id = Number(card.dataset.id);
+    const r = allReceipts.find(x => x.id === id);
+    if (!r || !r.imageData) continue;
+    const blob = await (await fetch(r.imageData)).blob();
+    const ext = r.imageData.includes('image/png') ? 'png' : 'jpeg';
+    const name = r.filename ? `${r.filename}.${ext}` : `kvitto_${r.id}.${ext}`;
+    files.push({ blob, name });
+  }
+
+  // Download one by one with correct filenames
+  for (const f of files) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(f.blob);
+    link.download = f.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    await new Promise(r => setTimeout(r, 500));
+  }
+  showToast(`${files.length} bild(er) sparade!`);
+}
+
+// ===== LIGHTBOX =====
+async function openLightbox(receiptId) {
+  const receipts = await dbGetAllReceipts();
+  const r = receipts.find(x => x.id === Number(receiptId));
+  if (!r) return;
+  document.getElementById('lightboxImg').src = r.imageData || '';
+  document.getElementById('lightboxFilename').textContent = r.filename || '';
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+document.getElementById('lightbox').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeLightbox();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+async function deleteReceipt(id) {
+  if (!confirm('Ta bort detta kvitto?')) return;
+  await dbDeleteReceipt(id);
+  loadReceipts();
+}
+
+// Save single receipt to device from IndexedDB
+async function saveReceiptToDevice(id) {
+  const receipts = await dbGetAllReceipts();
+  const r = receipts.find(x => x.id === id);
+  if (!r || !r.imageData) return;
+  await saveImageFromData(r.imageData, r.filename);
+}
+
+async function saveImageFromData(dataUrl, filename) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const ext = dataUrl.includes('image/png') ? 'png' : 'jpeg';
+  const fullName = filename ? `${filename}.${ext}` : `kvitto_${Date.now()}.${ext}`;
+
+  // Use download link — navigator.share doesn't preserve filenames on mobile
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fullName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  showToast(`Sparad: ${fullName}`);
+}
+
+// ===== VENDORS (leverantörer) =====
+document.getElementById('addVendorBtn').addEventListener('click', addVendor);
+document.getElementById('vendorUrl').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addVendor();
+});
+
+async function addVendor() {
+  const nameEl = document.getElementById('vendorName');
+  const urlEl = document.getElementById('vendorUrl');
+  const name = nameEl.value.trim();
+  const url = urlEl.value.trim();
+
+  if (!name) { showToast('Ange leverantörsnamn'); nameEl.focus(); return; }
+  if (!url) { showToast('Ange länk'); urlEl.focus(); return; }
+
+  // Add https:// if missing
+  const fullUrl = url.match(/^https?:\/\//) ? url : 'https://' + url;
+
+  await dbSaveVendor({
+    id: Date.now(),
+    name,
+    url: fullUrl,
+    createdAt: new Date().toISOString()
+  });
+
+  nameEl.value = '';
+  urlEl.value = '';
+  showToast(`${name} tillagd!`);
+  loadVendors();
+}
+
+async function loadVendors() {
+  const list = document.getElementById('vendorList');
+  const vendors = await dbGetAllVendors();
+
+  if (vendors.length === 0) {
+    list.innerHTML = '<div class="empty-state"><h3>Inga leverantörer ännu</h3><p>Lägg till en leverantör och länk till deras fakturasida</p></div>';
+    return;
+  }
+
+  let html = '';
+  for (const v of vendors) {
+    const safeName = v.name.replace(/'/g, "\\'");
+    const safeUrl = v.url.replace(/'/g, "\\'");
+    html += `
+      <div class="vendor-card" data-id="${v.id}">
+        <div class="vendor-info">
+          <div class="vendor-title">${v.name}</div>
+          <a href="${v.url}" target="_blank" rel="noopener">${v.url}</a>
+        </div>
+        <div class="vendor-actions">
+          <button class="vendor-open-btn" onclick="window.open('${safeUrl}', '_blank')">Öppna</button>
+          <button class="vendor-edit-btn" onclick="editVendor(${v.id}, '${safeName}', '${safeUrl}')">Redigera</button>
+          <button class="vendor-del-btn" onclick="deleteVendor(${v.id})">Ta bort</button>
+        </div>
+      </div>
+    `;
+  }
+  list.innerHTML = html;
+}
+
+async function editVendor(id, currentName, currentUrl) {
+  const name = prompt('Leverantörsnamn:', currentName);
+  if (name === null) return;
+  const url = prompt('Länk till fakturasida:', currentUrl);
+  if (url === null) return;
+
+  if (!name.trim() || !url.trim()) { showToast('Namn och länk krävs'); return; }
+
+  const fullUrl = url.match(/^https?:\/\//) ? url : 'https://' + url;
+  await dbSaveVendor({ id, name: name.trim(), url: fullUrl, createdAt: new Date().toISOString() });
+  showToast('Uppdaterad!');
+  loadVendors();
+}
+
+async function deleteVendor(id) {
+  if (!confirm('Ta bort denna leverantör?')) return;
+  await dbDeleteVendor(id);
+  showToast('Borttagen');
+  loadVendors();
+}
+
+// ===== TRANSACTIONS START TAB =====
+const txDropZone = document.getElementById('txDropZone');
+const txFileInput = document.getElementById('txFileInput');
+const txOcrStatus = document.getElementById('txOcrStatus');
+const txOcrProgress = document.getElementById('txOcrProgress');
+const txOcrProgressBar = document.getElementById('txOcrProgressBar');
+
+txDropZone.addEventListener('dragover', (e) => { e.preventDefault(); txDropZone.classList.add('dragover'); });
+txDropZone.addEventListener('dragleave', () => txDropZone.classList.remove('dragover'));
+txDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  txDropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) handleTransactionImage(e.dataTransfer.files[0]);
+});
+txDropZone.addEventListener('click', () => txFileInput.click());
+txFileInput.addEventListener('change', () => {
+  if (txFileInput.files.length > 0) handleTransactionImage(txFileInput.files[0]);
+});
+
+async function handleTransactionImage(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const imageData = e.target.result;
+
+    txOcrStatus.style.display = 'block';
+    txOcrProgress.style.display = 'block';
+    txOcrStatus.textContent = 'Läser transaktioner med OCR...';
+    txOcrProgressBar.style.width = '0%';
+
+    try {
+      const result = await Tesseract.recognize(imageData, 'swe+eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            txOcrProgressBar.style.width = Math.round(m.progress * 100) + '%';
+          }
+        }
+      });
+
+      const text = result.data.text;
+      console.log('Transaction OCR:', text);
+      txOcrProgressBar.style.width = '100%';
+
+      const transactions = parseTransactions(text);
+      if (transactions.length > 0) {
+        // Save each transaction to IndexedDB
+        let added = 0;
+        const existing = await dbGetAllTx();
+        for (const tx of transactions) {
+          // Check for duplicate (same date + merchant + amount)
+          const isDupe = existing.some(e =>
+            e.date === tx.date && e.merchant === tx.merchant && e.amount === tx.amount
+          );
+          if (!isDupe) {
+            await dbSaveTx({
+              id: Date.now() + added,
+              ...tx,
+              done: false,
+              createdAt: new Date().toISOString()
+            });
+            added++;
+          }
+        }
+        txOcrStatus.textContent = `Hittade ${transactions.length} transaktioner (${added} nya tillagda)`;
+        showToast(`${added} transaktioner tillagda!`);
+        loadTransactionList();
+      } else {
+        txOcrStatus.textContent = 'Kunde inte hitta några transaktioner i bilden';
+      }
+    } catch (err) {
+      txOcrStatus.textContent = 'OCR-fel: ' + err.message;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function loadTransactionList() {
+  const list = document.getElementById('txList');
+  const header = document.getElementById('txListHeader');
+  const counter = document.getElementById('txCounter');
+  const transactions = await dbGetAllTx();
+
+  if (transactions.length === 0) {
+    header.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  header.style.display = 'block';
+  const doneCount = transactions.filter(t => t.done).length;
+  counter.textContent = `${doneCount} / ${transactions.length} kvitton hämtade`;
+
+  let html = '';
+  for (const tx of transactions) {
+    const statusClass = tx.done ? 'done' : (tx.status === 'Pågående' ? 'pending' : 'not-handled');
+    const statusLabel = tx.done ? 'Kvitto hämtat' : (tx.status || 'Ej hanterad');
+    html += `
+      <div class="tx-item ${tx.done ? 'done' : ''}" data-id="${tx.id}">
+        <input type="checkbox" ${tx.done ? 'checked' : ''} onchange="toggleTxDone(${tx.id}, this.checked)">
+        <div class="tx-details">
+          <div class="tx-merchant">${tx.merchant}</div>
+          <div class="tx-meta">${tx.date}${tx.card ? ' &middot; Kort ' + tx.card : ''}</div>
+        </div>
+        <div class="tx-amount">${tx.amount} ${tx.currency || 'kr'}</div>
+        <span class="tx-status-badge ${statusClass}">${statusLabel}</span>
+      </div>
+    `;
+  }
+  list.innerHTML = html;
+}
+
+async function toggleTxDone(id, done) {
+  const all = await dbGetAllTx();
+  const tx = all.find(t => t.id === id);
+  if (tx) {
+    tx.done = done;
+    await dbSaveTx(tx);
+    loadTransactionList();
+  }
+}
+
+async function clearDoneTransactions() {
+  if (!confirm('Ta bort alla avbockade transaktioner?')) return;
+  const all = await dbGetAllTx();
+  for (const tx of all) {
+    if (tx.done) await dbDeleteTx(tx.id);
+  }
+  showToast('Avbockade borttagna');
+  loadTransactionList();
+}
+
+// Load transactions on page load
+loadTransactionList();
+</script>
+
+</body>
+</html>

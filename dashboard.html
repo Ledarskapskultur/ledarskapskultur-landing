@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ledarskapskultur - Dashboard</title>
+  <!-- Supabase API används via backend istället för CDN -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    /* LOGIN SCREEN */
+    .login-screen {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    .login-screen h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+
+    .login-screen p {
+      color: #666;
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+
+    .login-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+      margin-top: 40px;
+    }
+
+    .user-card {
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #f9f9f9;
+    }
+
+    .user-card:hover {
+      border-color: #667eea;
+      background: #f0f4ff;
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .user-card strong {
+      display: block;
+      color: #333;
+      margin-bottom: 4px;
+      font-size: 16px;
+    }
+
+    .user-card .role {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .user-card .role.admin {
+      color: #d32f2f;
+    }
+
+    .user-card .role.arranger {
+      color: #f57c00;
+    }
+
+    .user-card .role.instructor {
+      color: #388e3c;
+    }
+
+    .user-card .role.participant {
+      color: #1976d2;
+    }
+
+    /* DASHBOARD */
+    .dashboard {
+      display: none;
+    }
+
+    .dashboard-header {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .user-details h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .user-details .role {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .logout-btn {
+      padding: 10px 20px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #e0e0e0;
+    }
+
+    .dashboard-content {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 30px;
+      background: white;
+      border-radius: 0 0 12px 12px;
+    }
+
+    .card {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+
+    .card h3 {
+      color: #333;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card .emoji {
+      font-size: 20px;
+    }
+
+    .card-content {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    .list-card {
+      background: white;
+    }
+
+    .list-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-item-title {
+      color: #333;
+      font-weight: 500;
+    }
+
+    .list-item-meta {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .status-published {
+      background: #c8e6c9;
+      color: #2e7d32;
+    }
+
+    .status-draft {
+      background: #fff9c4;
+      color: #f57f17;
+    }
+
+    .status-confirmed {
+      background: #b3e5fc;
+      color: #01579b;
+    }
+
+    .error {
+      color: #d32f2f;
+      padding: 20px;
+      background: #ffebee;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #667eea;
+    }
+
+    .spinner {
+      border: 4px solid #f0f0f0;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-header {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .login-screen {
+        padding: 40px 20px;
+      }
+
+      .login-screen h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-screen">
+      <h1>🎓 Ledarskapskultur</h1>
+      <p>Välj din roll för att logga in</p>
+      <div class="login-options" id="loginOptions"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboardScreen" class="dashboard">
+      <div class="dashboard-header">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div class="user-details">
+            <h2 id="userName">Användare</h2>
+            <div class="role" id="userRole">admin</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logga ut</button>
+      </div>
+      <div class="dashboard-content" id="dashboardContent">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Laddar data...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // CONFIGURATION - SUPABASE KEYS
+    // ============================================
+    const SUPABASE_URL = 'https://rhzpdctiyaiwyzizcbeb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoenBkY3RpeWFpd3p5aXpjYmViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjQ4ODYsImV4cCI6MjA5MDQwMDg4Nn0.83AqASO-CP5hP03-g1YmcogXZquSU0iwKDw9RS9pdmg';
+
+    // TEST USERS (samma som test-data)
+    const TEST_USERS = {
+      admin: {
+        id: 'a1111111-1111-1111-1111-111111111111',
+        userId: '00000000-0000-0000-0000-000000000001',
+        name: 'Anna Admin',
+        role: 'admin',
+        email: 'anna@ledarskapskultur.se'
+      },
+      arranger: {
+        id: 'a2222222-2222-2222-2222-222222222222',
+        userId: '00000000-0000-0000-0000-000000000002',
+        name: 'Bo Arrangör',
+        role: 'arranger',
+        email: 'bo@ledarskapskultur.se'
+      },
+      instructor: {
+        id: 'a3333333-3333-3333-3333-333333333333',
+        userId: '00000000-0000-0000-0000-000000000003',
+        name: 'Cissi Coach',
+        role: 'instructor',
+        email: 'cissi@ledarskapskultur.se'
+      },
+      participant: {
+        id: 'a4444444-4444-4444-4444-444444444444',
+        userId: '00000000-0000-0000-0000-000000000004',
+        name: 'David Deltagare',
+        role: 'participant',
+        email: 'david@example.com'
+      }
+    };
+
+    var currentUser = null;
+
+    // API Helper - använder backend API istället för direkt Supabase
+    async function dbFetch(table, method = 'GET', data = null) {
+      try {
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+        if (data) options.body = JSON.stringify(data);
+
+        const response = await fetch(`/api/db/${table}`, options);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        console.error(`Database error on ${table}:`, error.message);
+        return [];
+      }
+    }
+
+    // Initialisering (nu redan färdig på server)
+    function initSupabase() {
+      console.log('✅ Backend Supabase API är redo');
+    }
+
+    // Initialize Login Screen
+    function initLoginScreen() {
+      const loginOptions = document.getElementById('loginOptions');
+      if (!loginOptions) return;
+
+      loginOptions.innerHTML = '';
+
+      Object.entries(TEST_USERS).forEach(([key, user]) => {
+        const card = document.createElement('div');
+        card.className = 'user-card';
+        card.onclick = () => login(user);
+        card.innerHTML = `
+          <strong>${user.name}</strong>
+          <div class="role ${user.role}">${translateRole(user.role)}</div>
+        `;
+        loginOptions.appendChild(card);
+      });
+
+      // Backend API är redan redo
+      initSupabase();
+    }
+
+    function translateRole(role) {
+      const translations = {
+        admin: 'Administratör',
+        arranger: 'Arrangör',
+        instructor: 'Handledare',
+        participant: 'Deltagare'
+      };
+      return translations[role] || role;
+    }
+
+    // Login (mock - normally would use Supabase auth)
+    async function login(user) {
+      currentUser = user;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('dashboardScreen').style.display = 'block';
+      document.getElementById('userName').textContent = user.name;
+      document.getElementById('userRole').textContent = translateRole(user.role);
+      document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+
+      loadDashboard(user.role);
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('dashboardScreen').style.display = 'none';
+    }
+
+    // Load Dashboard based on role
+    async function loadDashboard(role) {
+      const content = document.getElementById('dashboardContent');
+      content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Laddar data...</p></div>';
+
+      try {
+        switch(role) {
+          case 'admin':
+            await loadAdminDashboard();
+            break;
+          case 'arranger':
+            await loadArrangerDashboard();
+            break;
+          case 'instructor':
+            await loadInstructorDashboard();
+            break;
+          case 'participant':
+            await loadParticipantDashboard();
+            break;
+        }
+      } catch (error) {
+        content.innerHTML = `<div class="error full-width">Fel vid laddning: ${error.message}</div>`;
+      }
+    }
+
+    // ADMIN DASHBOARD
+    async function loadAdminDashboard() {
+      const content = document.getElementById('dashboardContent');
+      content.innerHTML = '';
+
+      // Fetch data från backend API
+      const orgs = await dbFetch('organizations');
+      const courses = await dbFetch('courses');
+      const enrollments = await dbFetch('enrollments');
+      const users = await dbFetch('user_profiles');
+
+      content.innerHTML = `
+        <div class="card">
+          <h3><span class="emoji">🏢</span> Organisationer</h3>
+          <div class="card-content">${orgs?.length || 0}</div>
+        </div>
+        <div class="card">
+          <h3><span class="emoji">📚</span> Kurser</h3>
+          <div class="card-content">${courses?.length || 0}</div>
+        </div>
+        <div class="card">
+          <h3><span class="emoji">👥</span> Användare</h3>
+          <div class="card-content">${users?.length || 0}</div>
+        </div>
+        <div class="card">
+          <h3><span class="emoji">📝</span> Anmälningar</h3>
+          <div class="card-content">${enrollments?.length || 0}</div>
+        </div>
+        <div class="card list-card full-width">
+          <h3><span class="emoji">📚</span> Alla kurser</h3>
+          ${courses?.map(c => `
+            <div class="list-item">
+              <div>
+                <div class="list-item-title">${c.name}</div>
+                <div class="list-item-meta">${c.course_type === 'public' ? 'Publik' : 'Företag'}</div>
+              </div>
+              <span class="status-badge ${c.is_published ? 'status-published' : 'status-draft'}">
+                ${c.is_published ? 'Publicerad' : 'Utkast'}
+              </span>
+            </div>
+          `).join('') || '<div class="list-item">Inga kurser</div>'}
+        </div>
+      `;
+    }
+
+    // ARRANGER DASHBOARD
+    async function loadArrangerDashboard() {
+      const content = document.getElementById('dashboardContent');
+      content.innerHTML = '';
+
+      const courses = await dbFetch('courses');
+      const instances = await dbFetch('course_instances');
+
+      content.innerHTML = `
+        <div class="card">
+          <h3><span class="emoji">📚</span> Mina kurser</h3>
+          <div class="card-content">${courses?.length || 0}</div>
+        </div>
+        <div class="card">
+          <h3><span class="emoji">📅</span> Kurstillfällen</h3>
+          <div class="card-content">${instances?.length || 0}</div>
+        </div>
+        <div class="card list-card full-width">
+          <h3><span class="emoji">📅</span> Mina kurstillfällen</h3>
+          ${instances?.map(i => `
+            <div class="list-item">
+              <div>
+                <div class="list-item-title">${i.title}</div>
+                <div class="list-item-meta">${new Date(i.start_date).toLocaleDateString('sv-SE')}</div>
+              </div>
+              <span class="status-badge status-${i.status}">${i.status}</span>
+            </div>
+          `).join('') || '<div class="list-item">Inga kurstillfällen</div>'}
+        </div>
+      `;
+    }
+
+    // INSTRUCTOR DASHBOARD
+    async function loadInstructorDashboard() {
+      const content = document.getElementById('dashboardContent');
+      content.innerHTML = '';
+
+      const instances = await dbFetch('course_instances');
+      const enrollments = await dbFetch('enrollments');
+
+      content.innerHTML = `
+        <div class="card">
+          <h3><span class="emoji">📚</span> Mina kurser</h3>
+          <div class="card-content">${instances?.length || 0}</div>
+        </div>
+        <div class="card">
+          <h3><span class="emoji">👥</span> Deltagare</h3>
+          <div class="card-content">${enrollments?.length || 0}</div>
+        </div>
+        <div class="card list-card full-width">
+          <h3><span class="emoji">📚</span> Mina kurstillfällen</h3>
+          ${instances?.map(i => `
+            <div class="list-item">
+              <div>
+                <div class="list-item-title">${i.title}</div>
+                <div class="list-item-meta">Startar: ${new Date(i.start_date).toLocaleDateString('sv-SE')}</div>
+              </div>
+            </div>
+          `).join('') || '<div class="list-item">Inga kurstillfällen</div>'}
+        </div>
+      `;
+    }
+
+    // PARTICIPANT DASHBOARD
+    async function loadParticipantDashboard() {
+      const content = document.getElementById('dashboardContent');
+      content.innerHTML = '';
+
+      const enrollments = await dbFetch('enrollments');
+
+      content.innerHTML = `
+        <div class="card">
+          <h3><span class="emoji">📚</span> Mina kurser</h3>
+          <div class="card-content">${enrollments?.length || 0}</div>
+        </div>
+        <div class="card list-card full-width">
+          <h3><span class="emoji">📅</span> Mina anmälningar</h3>
+          ${enrollments?.map(e => `
+            <div class="list-item">
+              <div>
+                <div class="list-item-title">${e.course_instances?.title || 'Okänd kurs'}</div>
+                <div class="list-item-meta">${new Date(e.course_instances?.start_date).toLocaleDateString('sv-SE')}</div>
+              </div>
+              <span class="status-badge status-${e.status}">${e.status}</span>
+            </div>
+          `).join('') || '<div class="list-item">Du är inte anmäld till någon kurs ännu</div>'}
+        </div>
+      `;
+    }
+
+    // Initialize
+    initLoginScreen();
+  </script>
+</body>
+</html>
