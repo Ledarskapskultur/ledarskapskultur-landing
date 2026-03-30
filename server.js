@@ -321,6 +321,16 @@ app.delete('/api/db/:table/:id', async (req, res) => {
 app.use(express.static(__dirname));
 app.use('/receipts', express.static(RECEIPTS_DIR));
 
+// Root route - test that server is working
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Server is running',
+    PORT,
+    __dirname,
+    fileExists: fs.existsSync(path.join(__dirname, 'dashboard.html'))
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`\n✅ Server körs på http://localhost:${PORT}`);
   console.log(`   Landingssida: http://localhost:${PORT}/index.html`);
