@@ -321,14 +321,22 @@ app.delete('/api/db/:table/:id', async (req, res) => {
 app.use(express.static(__dirname));
 app.use('/receipts', express.static(RECEIPTS_DIR));
 
+// Explicit routes for HTML files (before static middleware is sometimes needed)
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/kvitton.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'kvitton.html'));
+});
+
 // Root route - test that server is working
 app.get('/', (req, res) => {
-  res.json({
-    message: 'Server is running',
-    PORT,
-    __dirname,
-    fileExists: fs.existsSync(path.join(__dirname, 'dashboard.html'))
-  });
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
